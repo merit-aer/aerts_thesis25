@@ -33,32 +33,17 @@ class apr28Ana_2e: public framework::Analyzer {
    void apr28Ana_2e::onProcessStart() {
     getHistoDirectory();
 
-    hist1D_=new TH1F("pid3count","am of pid3 hits per event",5,0,5);
-    histograms_.create("track_dist2","dist between tracks when 2 pid3",100,0,600);
-    hist1Dp[0]=new TH1F(" "," ",100,0,500);
+    hist1D_=new TH1F("pid37count","am of pid3/7 hits per event",5,0,5);
+    hist1Dp[0]=new TH1F("track_dist2","dist between tracks when 2 pid3",100,0,500);
+    hist1Dp[1]=new TH1F("track_dist0","dist between tracks when 0 pid3",100,0,500);
+    hist1Dp[2]=new TH1F("track_dist1","dist between tracks when 1 pid3",100,0,500);
+    hist1Dp[3]=new TH1F("cluster_dist2","dist between clusters when 2 pid3",100,0,500);
+    hist1Dp[4]=new TH1F("cluster_dist1","dist between clusters when 1 pid3",100,0,500);
+    hist1Dp[5]=new TH1F("cluster_dist0","dist between clusters when 0 pid3",100,0,500);
 
-    histograms_.create("track_dist0","dist between tracks when 0 pid3",100,0,600);
-    hist1Dp[1]=new TH1F(" "," ",100,0,500);
-
-    histograms_.create("track_dist1","dist between tracks when 1 pid3",100,0,600);
-    hist1Dp[2]=new TH1F(" "," ",100,0,500);
-
-    histograms_.create("cluster_dist2","dist between clusters when 2 pid3",100,0,600);
-    hist1Dp[3]=new TH1F(" "," ",100,0,500);
-
-    histograms_.create("cluster_dist1","dist between clusters when 1 pid3",100,0,600);
-    histograms_.create("cluster_dist1_cut","dist between clusters when 1 pid3",100,0,600);
-    hist1Dp[4]=new TH1F(" "," ",100,0,500);
-
-    histograms_.create("cluster_dist0","dist between clusters when no pid3",100,0,600);
-    hist1Dp[5]=new TH1F(" "," ",100,0,500);
-
-    histograms_.create("cluster_dist2_highE","dist between 2 high E clusters when 2 pid3",100,0,1000);
-    histograms_.create("clusterE"," ", 200,0,50);
+    histograms_.create("clusterE"," ", 200,0,50); //checking for extreme low energy clustere (E~0 MeV)
     histograms_.create("pidcount1_match"," ",2,0,2);
 
-    hist2D[0]=new TH2F("clus_distvsE_2"," ",100,0,600,100,0,6000);
-    hist2D[1]=new TH2F("clus_distvsE_!2"," ",100,0,600,100,0,6000);
     hist2D[2]=new TH2F("clusVStrack_dist_2"," ",100,0,500,100,0,500);
     hist2D[3]=new TH2F("clusVStrack_dist_1"," ",100,0,500,100,0,500);
     hist2D[4]=new TH2F("clusVStrack_dist_0", " ",100,0,500,100,0,500);
@@ -105,11 +90,10 @@ class apr28Ana_2e: public framework::Analyzer {
 
     std::vector<ldmx::PFCandidate> cand{event.getCollection<ldmx::PFCandidate>("PFCandidates")};
     std::vector<ldmx::SimTrackerHit> track{event.getCollection<ldmx::SimTrackerHit>("PFTracks")};
-    //std::vector<ldmx::TriggerResult> trig{event.getCollection<ldmx::TriggerResult>("Trigger")};
     ldmx::TriggerResult trig=event.getObject<ldmx::TriggerResult>("Trigger");
     int pass=trig.passed();
 
-    int count_pid3=0, count_pid7=0, count_pid37=0;
+    int count_pid37=0;
     float m_e=0.51099895069; //MeV
 
     ldmx::PFCandidate hits_pid37[3];
@@ -120,14 +104,14 @@ class apr28Ana_2e: public framework::Analyzer {
 
     //pid3 count
     for (ldmx::PFCandidate hit : cand){
-        if(hit.getPID()==3){count_pid3++;}; //|| hit.getPID()==7
-        if(hit.getPID()==7){count_pid7++;};
         if(hit.getPID()==3 || hit.getPID()==7){
             hits_pid37[count_pid37]=hit;
             count_pid37++;
         };
     };
-    hist1D_->Fill(count_pid3);
+    hist1D_->Fill(count_pid37);
+
+
 
     //energy distributions
     if (count_pid37>1){
@@ -170,107 +154,57 @@ class apr28Ana_2e: public framework::Analyzer {
         
     };
 
+
+    
     //track distance
     if (track.size()==2){
         std::vector<float> pos1=track[0].getPosition(), pos2=track[1].getPosition();
         float track_dist=sqrt(pow(pos1[0]-pos2[0],2)+pow(pos1[1]-pos2[1],2)+pow(pos1[2]-pos2[2],2));
 
         if (count_pid37==2) {
-            histograms_.fill("track_dist2",track_dist);
             hist1Dp[0]->Fill(track_dist);
         } else if (count_pid37==1){
-            histograms_.fill("track_dist1",track_dist);
             hist1Dp[2]->Fill(track_dist);
         } else {
-            histograms_.fill("track_dist0",track_dist);
             hist1Dp[1]->Fill(track_dist);
         };
     };
 
-    //cluster distance
-    std::vector<float> xyz[2];
-    float clus_dist;
-    int ind=0;
-    if (count_pid37==2){
-        for (ldmx::PFCandidate hit : cand){
-            if (hit.getPID()==3 || hit.getPID()==7){
-                xyz[ind]=hit.getEcalClusterXYZ();
-                ind++;
-            }
-        };
-        clus_dist=sqrt(pow(xyz[0][0]-xyz[1][0],2)+pow(xyz[0][1]-xyz[1][1],2));//+pow(xyz[0][2]-xyz[1][2],2));
-        histograms_.fill("cluster_dist2",clus_dist);
-        hist1Dp[3]->Fill(clus_dist);
-    };//} else {
-    //    std::vector<float> clus1=cand[0].getEcalClusterXYZ(), clus2=cand[1].getEcalClusterXYZ();
-    //    clus_dist=sqrt(pow(clus1[0]-clus2[0],2)+pow(clus1[1]-clus2[1],2)+pow(clus1[2]-clus2[2],2));
-        
-    //    if (count_pid3==1){histograms_.fill("cluster_dist1",clus_dist);};
-    //    if (count_pid3==0){histograms_.fill("cluster_dist0",clus_dist);};
-    //};
 
     std::sort(cand.begin(),cand.end(),
-        [](ldmx::PFCandidate a, ldmx::PFCandidate b){return a.getEcalRawEnergy()>b.getEcalRawEnergy();});
-
-    std::vector<float> clus1=cand[0].getEcalClusterXYZ(), clus2=cand[1].getEcalClusterXYZ();
-    clus_dist=sqrt(pow(clus1[0]-clus2[0],2)+pow(clus1[1]-clus2[1],2));//+pow(clus1[2]-clus2[2],2));
-
-    if (count_pid37==1){histograms_.fill("cluster_dist1",clus_dist);};
-    if (cand[1].getEcalRawEnergy()>5){
-        if (count_pid37==2){
-            histograms_.fill("cluster_dist2_highE",clus_dist);
-            hist2D[0]->Fill(clus_dist,cand[1].getEcalRawEnergy());} else {hist2D[1]->Fill(clus_dist,cand[1].getEcalRawEnergy());};
-        //if (count_pid37==1){histograms_.fill("cluster_dist1_cut",clus_dist);};
-        if (count_pid37==0){
-            histograms_.fill("cluster_dist0",clus_dist);
-            hist1Dp[5]->Fill(clus_dist);
-        };
-    };
-    if(count_pid3==1){
-        std::vector<float> xyz1=hits_pid37[0].getEcalClusterXYZ(),xyz2;
-        if (cand[0].getEcalRawEnergy()-hits_pid37[0].getEcalRawEnergy()<0.1){
-            xyz2=cand[1].getEcalClusterXYZ();
-        }else{
-            xyz2=cand[0].getEcalClusterXYZ();
-        }
-        float clus_dist=sqrt(pow(xyz1[0]-xyz2[0],2)+pow(xyz1[1]-xyz2[1],2));
-        //histograms_.fill("cluster_dist1_cut",clus_dist);
-    }
-
-
-
+    [](ldmx::PFCandidate a, ldmx::PFCandidate b){return a.getEcalRawEnergy()>b.getEcalRawEnergy();});
+    
     //track vs cluster dist
-    float clus_dist_;
+    float clus_dist, track_dist;
+    std::vector<float> xyz[2];
     if(track.size()==2 && cand[1].getEcalRawEnergy()>5){
         std::vector<float> pos1=track[0].getPosition(), pos2=track[1].getPosition();
         float track_dist=sqrt(pow(pos1[0]-pos2[0],2)+pow(pos1[1]-pos2[1],2));//+pow(pos1[2]-pos2[2],2));
         int ind=0;
 
         if (count_pid37==2){
-            for (ldmx::PFCandidate hit : cand){
-                if (hit.getPID()==3||hit.getPID()==7){
-                    xyz[ind]=hit.getEcalClusterXYZ();
-                    ind++;
-                }
-            };
+            xyz[0]=hits_pid37[0].getEcalClusterXYZ();
+            xyz[1]=hits_pid37[1].getEcalClusterXYZ();
+        
             clus_dist=sqrt(pow(xyz[0][0]-xyz[1][0],2)+pow(xyz[0][1]-xyz[1][1],2));//+pow(xyz[0][2]-xyz[1][2],2));
 
             hist2D[2]->Fill(clus_dist,track_dist);
+            hist1Dp[3]->Fill(clus_dist);
         } else {
             std::vector<float> clus1=cand[0].getEcalClusterXYZ(), clus2=cand[1].getEcalClusterXYZ();
-            clus_dist_=sqrt(pow(clus1[0]-clus2[0],2)+pow(clus1[1]-clus2[1],2));//+pow(clus1[2]-clus2[2],2));
+            clus_dist=sqrt(pow(clus1[0]-clus2[0],2)+pow(clus1[1]-clus2[1],2));//+pow(clus1[2]-clus2[2],2));
 
             std::vector<double> p1=track[0].getMomentum(),p2=track[1].getMomentum();
             float E1=sqrt(p1[0]*p1[0]+p1[1]*p1[1]+p1[2]*p1[2]+m_e*m_e), E2=sqrt(p2[0]*p2[0]+p2[1]*p2[1]+p2[2]*p2[2]+m_e*m_e);
 
-            if (E1>5 && E2>5){
-                if (count_pid37==1){
-                    //hist2D[3]->Fill(clus_dist_,track_dist);
-                };
-                if (count_pid37==0){hist2D[4]->Fill(clus_dist_,track_dist);};
+            if (E1>5 && E2>5 && count_pid37==0){
+                hist2D[4]->Fill(clus_dist,track_dist);
+                hist1Dp[5]->Fill(clus_dist);
             };
         }; 
-    };
+    
+
+
 
     // ^signal v pileup
     if(track.size()==2 && cand[1].getEcalRawEnergy()>5 && count_pid37==1){
@@ -306,9 +240,9 @@ class apr28Ana_2e: public framework::Analyzer {
             hist2D[6]->Fill(dist_clus,dist_track);
         }
         hist2D[3]->Fill(dist_clus,dist_track);
-        histograms_.fill("cluster_dist1_cut",dist_clus);
         hist1Dp[4]->Fill(dist_clus);
     };
+
 
 
     // 1 pid3 distances
@@ -334,8 +268,8 @@ class apr28Ana_2e: public framework::Analyzer {
         float dist_notpid3=sqrt(pow(tkXAtClus-clusXYZ[0],2)+pow(tkYAtClus-clusXYZ[1],2));
         
         hist2D[5]->Fill(dist_pid3,dist_notpid3);
-        //std::cout<<dist_pid3<<" "<<dist_notpid3<<std::endl;
     };
+
 
 
     //3d plots
@@ -362,5 +296,6 @@ class apr28Ana_2e: public framework::Analyzer {
     eventnr++;
 
    };
+};
 
 DECLARE_ANALYZER(apr28Ana_2e);
