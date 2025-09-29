@@ -12,3 +12,5 @@ input files:
 - *apr28Config_2e.py* requires an input file with two-electron events, also run through ParticlFlow. This is done by overlaying two single-electron events into one file, before running it through ParticleFlow.
 
 Both analyzers produce .root files with histograms for analyzing the performance of ParticleFlow depending on amount of electrons and signal energy.
+
+Link to thesis: http://lup.lub.lu.se/student-papers/record/9210730
